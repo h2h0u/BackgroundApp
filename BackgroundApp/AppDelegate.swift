@@ -10,15 +10,17 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         case day
         case evening
         case night
+
+        // Total mapping enforced by the compiler
+        var assetID: String {
+            switch self {
+            case .morning: return "B2FC91ED-6891-4DEB-85A1-268B2B4160B6"
+            case .day:     return "4C108785-A7BA-422E-9C79-B0129F1D5550"
+            case .evening: return "52ACB9B8-75FC-4516-BC60-4550CFF3B661"
+            case .night:   return "CF6347E2-4F81-4410-8892-4830991B6C5A"
+            }
+        }
     }
-    
-    // Static mapping from TimeOfDay to assetID
-    private static let assetIDs: [TimeOfDay: String] = [
-        .morning: "B2FC91ED-6891-4DEB-85A1-268B2B4160B6",
-        .day:     "4C108785-A7BA-422E-9C79-B0129F1D5550",
-        .evening: "52ACB9B8-75FC-4516-BC60-4550CFF3B661",
-        .night:   "CF6347E2-4F81-4410-8892-4830991B6C5A",
-    ]
     
     // MARK: - Paths
     // Use URL-based paths for safety and correctness
@@ -196,11 +198,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: - Wallpaper switching helpers
     private func switchTo(timeOfDay: TimeOfDay) {
-        // Lookup assetID from static mapping
-        guard let assetID = AppDelegate.assetIDs[timeOfDay] else {
-            print("No assetID mapping for \(timeOfDay)")
-            return
-        }
+        let assetID = timeOfDay.assetID
 
         do {
             try updateIndexPlist(withAssetID: assetID)
