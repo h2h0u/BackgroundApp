@@ -166,9 +166,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private func reconcileCurrentTimeAgainst(times: SunCalc) {
         let now = Date()
 
-        // We only care about dawn (morning start) and goldenHour (evening start).
-        guard let morningStart = times.dawn else {
-            print("No dawn time available to reconcile.")
+        // We only care about nightEnd (morning start) and goldenHour (evening start).
+        guard let morningStart = times.nightEnd else {
+            print("No night end time available to reconcile.")
             return
         }
 
@@ -289,7 +289,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     // MARK: - Scheduling using SunCalc (Golden Hours)
-    // Night → Morning at dawn (start of morning golden hour)
+    // Night → Morning at nightEnd (start of morning golden hour)
     // Day → Evening at goldenHour (start of evening golden hour)
     private func scheduleGoldenHourEvents(for coordinate: CLLocationCoordinate2D, on date: Date) {
         // Cancel existing timers
@@ -304,8 +304,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // getTimes returns a non-optional SunCalc instance
         let times = SunCalc.getTimes(date: today, latitude: coordinate.latitude, longitude: coordinate.longitude)
 
-        // We need dawn and goldenHour from the SunCalc instance; those are optionals.
-        guard let morningGoldenHourStart = times.dawn,
+        // We need nightEnd and goldenHour from the SunCalc instance; those are optionals.
+        guard let morningGoldenHourStart = times.nightEnd,
               let eveningGoldenHourStart = times.goldenHour else {
             print("Golden hour times unavailable for today at \(coordinate)")
             return
