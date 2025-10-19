@@ -166,33 +166,21 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private func reconcileCurrentTimeAgainst(times: SunCalc) {
         let now = Date()
 
-        // We only care about nightEnd (morning start) and goldenHour (evening start).
-        guard let morningStart = times.nightEnd else {
-            print("No night end time available to reconcile.")
-            return
-        }
-
-        // goldenHour is the evening golden hour start in SunCalc
-        guard let eveningStart = times.goldenHour else {
-            print("No evening golden hour time available to reconcile.")
-            return
-        }
-
         // Only reconcile if day or night transition has not yet occurred
         let isDarkMode = UserDefaults.standard.string(forKey: "AppleInterfaceStyle") == "Dark"
 
-        if now >= morningStart && now < eveningStart && isDarkMode {
+        if let morningStart = times.nightEnd,
+           let morningEnd = times.goldenHourEnd,
+           now >= morningStart && now < morningEnd && isDarkMode {
             // Past morning start but before day → ensure morning is active
             print("Reconcile on wake: now past morning start, switching to morning.")
             switchTo(timeOfDay: .morning)
-        } else if now >= eveningStart && !isDarkMode {
+        } else if let eveningStart = times.goldenHour,
+                  let eveningEnd = times.night,
+                  now >= eveningStart && now < eveningEnd && !isDarkMode {
             // Past evening start but before night → ensure evening is active
             print("Reconcile on wake: now past evening start, switching to evening.")
             switchTo(timeOfDay: .evening)
-        } else {
-            // Before morning start → remain in night until morning timer fires
-            // After day start → remain in day until evening timer fires
-            print("Reconcile on wake: now in day or night.")
         }
     }
 
