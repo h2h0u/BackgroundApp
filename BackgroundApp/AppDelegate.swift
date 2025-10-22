@@ -20,6 +20,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             case .night:   return "CF6347E2-4F81-4410-8892-4830991B6C5A"
             }
         }
+
+        // SF Symbol to use for the status bar icon
+        var systemSymbolName: String {
+            switch self {
+            case .morning: return "sunrise"
+            case .day:     return "sun.max"
+            case .evening: return "sunset"
+            case .night:   return "moon"
+            }
+        }
     }
     
     // MARK: - Paths
@@ -81,6 +91,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // If we already have a location (e.g., from earlier in the session), schedule immediately
         if let loc = lastLocation {
             scheduleGoldenHourEvents(for: loc.coordinate, on: Date())
+            // Also set the status item icon to match "now"
+            updateStatusItemIconForCurrentTime(using: loc.coordinate)
         }
 
         // Schedule daily reschedule shortly after midnight
@@ -98,9 +110,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Status Bar Setup
     private func setupStatusBar() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-        if let button = statusItem?.button {
-            button.image = NSImage(systemSymbolName: "sun.max", accessibilityDescription: "Wallpaper Scheduler")
-        }
+        setStatusItemImage(symbolName: "sun.max")
 
         let requestItem = NSMenuItem(title: "Request Location Access", action: #selector(requestLocationFromMenu), keyEquivalent: "")
         requestItem.target = self
@@ -186,6 +196,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: - Wallpaper switching helpers
     private func switchTo(timeOfDay: TimeOfDay) {
+        // Update status bar icon to reflect the new time-of-day
+        setStatusItemImage(symbolName: timeOfDay.systemSymbolName)
+
         let assetID = timeOfDay.assetID
 
         do {
@@ -274,6 +287,45 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
         lastLocation = location
         scheduleGoldenHourEvents(for: location.coordinate, on: Date())
+        // Keep status icon in sync when location changes
+        updateStatusItemIconForCurrentTime(using: location.coordinate)
+    }
+
+    // MARK: - Derive current TimeOfDay and update status icon (no wallpaper change)
+    private func currentTimeOfDay(for times: SunCalc, now: Date = Date()) -> TimeOfDay {
+        // Define ranges based on SunCalc:
+        // morning: nightEnd ..< goldenHourEnd
+        // day:     goldenHourEnd ..< goldenHour (broad daylight)
+        // evening: goldenHour ..< night
+        // night:   otherwise
+        if let start = times.nightEnd, let end = times.goldenHourEnd, now >= start && now < end {
+            return .morning
+        }
+        if let start = times.goldenHourEnd, let end = times.goldenHour, now >= start && now < end {
+            return .day
+        }
+        if let start = times.goldenHour, let end = times.night, now >= start && now < end {
+            return .evening
+        }
+        return .night
+    }
+
+    private func updateStatusItemIconForCurrentTime(using coordinate: CLLocationCoordinate2D, now: Date = Date()) {
+        let times = SunCalc.getTimes(date: now, latitude: coordinate.latitude, longitude: coordinate.longitude)
+        let tod = currentTimeOfDay(for: times, now: now)
+        setStatusItemImage(symbolName: tod.systemSymbolName)
+    }
+
+    // MARK: - Status item image helper (extracted)
+    private func setStatusItemImage(symbolName: String) {
+        guard let button = statusItem?.button else { return }
+        let image = NSImage(systemSymbolName: symbolName, accessibilityDescription: "Wallpaper Scheduler")
+        if #available(macOS 11.0, *) {
+            let config = NSImage.SymbolConfiguration(pointSize: NSFont.systemFontSize, weight: .regular)
+            button.image = image?.withSymbolConfiguration(config)
+        } else {
+            button.image = image
+        }
     }
 
     // MARK: - Scheduling using SunCalc (Golden Hours)
